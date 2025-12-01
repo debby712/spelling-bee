@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Bee Master - 靜默拼寫練習</title>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #FFC107;
+            --success-color: #2ECC71;
+            --error-color: #E74C3C;
+            --bg-color: #F0F4F8;
+            --card-bg: #FFFFFF;
+            --text-main: #2C3E50;
+            --text-light: #7F8C8D;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 600px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header & Progress */
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--secondary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Game Area */
+        .game-area {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .meaning-display {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-weight: bold;
+            min-height: 60px;
+        }
+
+        .syllable-hint {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            min-height: 30px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.5rem;
+            border: 3px solid #ddd;
+            border-radius: 12px;
+            text-align: center;
+            transition: border-color 0.3s;
+            outline: none;
+            text-transform: lowercase;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+        }
+
+        input[type="text"].error {
+            border-color: var(--error-color);
+            animation: shake 0.5s;
+        }
+
+        input[type="text"].success {
+            border-color: var(--success-color);
+            background-color: #e8f8f5;
+        }
+
+        input[type="text"]:disabled {
+            background-color: #eee;
+            cursor: not-allowed;
+        }
+
+        /* Buttons */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-hint {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-check {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-next {
+            background-color: var(--success-color);
+            color: white;
+            grid-column: span 2;
+            display: none; /* Hidden initially */
+        }
+
+        /* Footer Info */
+        .footer {
+            padding: 15px;
+            background: #f8f9fa;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* Start Screen Overlay */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .overlay h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .overlay p {
+            color: var(--text-light);
+            margin-bottom: 30px;
+            max-width: 80%;
+            text-align: center;
+        }
+
+        .start-btn {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.4);
+        }
+
+        /* Confetti (Simple CSS implementation) */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall linear forwards;
+            top: -10px;
+            z-index: 5;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(600px) rotate(720deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div id="scoreDisplay">分數: 0</div>
+        <div id="progressDisplay">1 / 75</div>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressBar"></div>
+    </div>
+
+    <div class="game-area">
+        <div class="meaning-display" id="meaningDisplay">準備開始...</div>
+        
+        <div class="syllable-hint" id="syllableDisplay"></div>
+
+        <div class="input-group">
+            <input type="text" id="wordInput" placeholder="在此輸入單字..." autocomplete="off">
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-hint" onclick="showHint()">💡 提示 (Hint)</button>
+            <button class="btn btn-check" id="checkBtn" onclick="checkAnswer()">✅ 檢查 (Check)</button>
+            <button class="btn btn-next" id="nextBtn" onclick="nextWord()">➡ 下一題 (Next)</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        Spelling Bee 練習模式
+    </div>
+
+    <div class="overlay" id="startScreen">
+        <h1>📝 Spelling Master (靜默模式)</h1>
+        <p>歡迎來到靜默模式！<br>請看中文解釋，使用提示，然後輸入正確的英文單字。</p>
+        <button class="start-btn" onclick="startGame()">開始挑戰</button>
+    </div>
+
+    <div class="overlay" id="endScreen" style="display: none;">
+        <h1>挑戰完成！🎉</h1>
+        <p id="finalScore">你的最終分數是: 0</p>
+        <button class="start-btn" onclick="location.reload()">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    // 資料來源：包含單字、音節和中文解釋的陣列
+    const wordData = [
+        { word: "survey", syllables: ["sur", "vey"], meaning: "調查" },
+        { word: "passenger", syllables: ["pas", "sen", "ger"], meaning: "乘客" },
+        { word: "airline", syllables: ["air", "line"], meaning: "航空公司" },
+        { word: "Singapore", syllables: ["Sin", "ga", "pore"], meaning: "新加坡" },
+        { word: "destination", syllables: ["des", "ti", "na", "tion"], meaning: "目的地" },
+        { word: "personal particulars/ details", syllables: ["per", "so", "nal", " ", "par", "ti", "cu", "lars"], meaning: "個人資料" },
+        { word: "nationality", syllables: ["na", "tion", "al", "i", "ty"], meaning: "國籍" },
+        { word: "residence", syllables: ["res", "i", "dence"], meaning: "住所/居留地" },
+        { word: "British", syllables: ["Brit", "ish"], meaning: "英國的/英國人" },
+        { word: "Thailand", syllables: ["Thai", "land"], meaning: "泰國" },
+        { word: "occupation", syllables: ["oc", "cu", "pa", "tion"], meaning: "職業" },
+        { word: "legal", syllables: ["le", "gal"], meaning: "法律的/合法的" },
+        { word: "journalism", syllables: ["jour", "nal", "ism"], meaning: "新聞業/新聞學" },
+        { word: "government", syllables: ["gov", "ern", "ment"], meaning: "政府" },
+        { word: "Bangkok", syllables: ["Bang", "kok"], meaning: "曼谷" },
+        { word: "leave", syllables: ["leave"], meaning: "離開/休假" },
+        { word: "on time", syllables: ["on", " ", "time"], meaning: "準時" },
+        { word: "reputation", syllables: ["rep", "u", "ta", "tion"], meaning: "名譽/聲譽" },
+        { word: "choices", syllables: ["choic", "es"], meaning: "選擇" },
+        { word: "Bear in mind", syllables: ["Bear", " ", "in", " ", "mind"], meaning: "記住/牢記" },
+        { word: "perhaps", syllables: ["per", "haps"], meaning: "或許/可能" },
+        { word: "important", syllables: ["im", "por", "tant"], meaning: "重要的" },
+        { word: "achieve", syllables: ["a", "chieve"], meaning: "達成/實現" },
+        { word: "disorganized", syllables: ["dis", "or", "gan", "ized"], meaning: "雜亂無章的" },
+        { word: "crazy", syllables: ["cra", "zy"], meaning: "瘋狂的" },
+        { word: "encourage", syllables: ["en", "cour", "age"], meaning: "鼓勵" },
+        { word: "noisy", syllables: ["nois", "y"], meaning: "嘈雜的/吵鬧的" },
+        { word: "location", syllables: ["lo", "ca", "tion"], meaning: "地點/位置" },
+        { word: "concentrate", syllables: ["con", "cen", "trate"], meaning: "集中精神/專心" },
+        { word: "professor", syllables: ["pro", "fes", "sor"], meaning: "教授" },
+        { word: "surprising", syllables: ["sur", "pris", "ing"], meaning: "令人驚訝的" },
+        { word: "gimmicks", syllables: ["gim", "micks"], meaning: "花招/噱頭" },
+        { word: "lecture", syllables: ["lec", "ture"], meaning: "演講/講課" },
+        { word: "communist", syllables: ["com", "mu", "nist"], meaning: "共產主義者" },
+        { word: "attract", syllables: ["at", "tract"], meaning: "吸引" },
+        { word: "aid", syllables: ["aid"], meaning: "幫助/援助" },
+        { word: "improve", syllables: ["im", "prove"], meaning: "改善/提高" },
+        { word: "command", syllables: ["com", "mand"], meaning: "命令/指揮" },
+        { word: "Bureau", syllables: ["Bu", "reau"], meaning: "局" },
+        { word: "godfather", syllables: ["god", "fa", "ther"], meaning: "教父" },
+        { word: "subtitle", syllables: ["sub", "ti", "tle"], meaning: "字幕" },
+        { word: "sweeping", syllables: ["sweep", "ing"], meaning: "全面的/廣泛的" },
+        { word: "represent", syllables: ["rep", "re", "sent"], meaning: "代表" },
+        { word: "academic", syllables: ["ac", "a", "dem", "ic"], meaning: "學術的" },
+        { word: "technique", syllables: ["tech", "nique"], meaning: "技術/技法" },
+        { word: "invented", syllables: ["in", "vent", "ed"], meaning: "發明的" },
+        { word: "empire", syllables: ["em", "pire"], meaning: "帝國" },
+        { word: "suitable for", syllables: ["suit", "a", "ble", " ", "for"], meaning: "適合" },
+        { word: "title", syllables: ["ti", "tle"], meaning: "標題/頭銜" },
+        { word: "dinosaurs", syllables: ["di", "no", "saurs"], meaning: "恐龍" },
+        { word: "serves as", syllables: ["serves", " ", "as"], meaning: "充當/作為" },
+        { word: "clever tricks", syllables: ["clev", "er", " ", "tricks"], meaning: "聰明的詭計/花招" },
+        { word: "mentioned", syllables: ["men", "tioned"], meaning: "提到/提及" },
+        { word: "worth", syllables: ["worth"], meaning: "價值" },
+        { word: "cope with", syllables: ["cope", " ", "with"], meaning: "應對/處理" },
+        { word: "made in", syllables: ["made", " ", "in"], meaning: "製造於" },
+        { word: "neighbourhood", syllables: ["neigh", "bour", "hood"], meaning: "鄰里/街區" },
+        { word: "video", syllables: ["vid", "e", "o"], meaning: "影片/錄像" },
+        { word: "comments", syllables: ["com", "ments"], meaning: "評論/意見" },
+        { word: "consider", syllables: ["con", "sid", "er"], meaning: "考慮/認為" },
+        { word: "hunters", syllables: ["hunt", "ers"], meaning: "獵人" },
+        { word: "roam", syllables: ["roam"], meaning: "漫遊/遊蕩" },
+        { word: "bellow", syllables: ["bel", "low"], meaning: "吼叫/咆哮" },
+        { word: "afterwards", syllables: ["af", "ter", "wards"], meaning: "之後/後來" },
+        { word: "amazed", syllables: ["a", "mazed"], meaning: "驚訝的/驚奇的" },
+        { word: "Disney", syllables: ["Dis", "ney"], meaning: "迪士尼" },
+        { word: "pre-schoolers", syllables: ["pre", "-", "school", "ers"], meaning: "學齡前兒童" },
+        { word: "fawn", syllables: ["fawn"], meaning: "幼鹿/奉承" },
+        { word: "gentle", syllables: ["gen", "tle"], meaning: "溫和的/輕柔的" },
+        { word: "survive", syllables: ["sur", "vive"], meaning: "生存/存活" },
+        { word: "grow up", syllables: ["grow", " ", "up"], meaning: "成長/長大" },
+        { word: "delighted", syllables: ["de", "light", "ed"], meaning: "高興的/歡喜的" },
+        { word: "well-loved music", syllables: ["well", "-", "loved", " ", "mu", "sic"], meaning: "受歡迎的音樂" },
+        { word: "incredible", syllables: ["in", "cred", "i", "ble"], meaning: "難以置信的/驚人的" }
+    ];
+
+    // Game State
+    let currentIndex = 0;
+    let score = 0;
+    let currentWordObj = null;
+    let hintLevel = 0; // 0: no hint, 1+: reveal syllables
+
+    // DOM Elements
+    const meaningDisplay = document.getElementById('meaningDisplay');
+    const syllableDisplay = document.getElementById('syllableDisplay');
+    const wordInput = document.getElementById('wordInput');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const progressDisplay = document.getElementById('progressDisplay');
+    const progressBar = document.getElementById('progressBar');
+    const checkBtn = document.getElementById('checkBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const startScreen = document.getElementById('startScreen');
+
+    function startGame() {
+        startScreen.style.display = 'none';
+        currentIndex = 0;
+        score = 0;
+        updateScore();
+        // 洗牌 (可選，如果想隨機出題，請取消下面這行的註解)
+        // shuffleArray(wordData); 
+        loadWord(currentIndex);
+    }
+
+    function loadWord(index) {
+        if (index >= wordData.length) {
+            endGame();
+            return;
+        }
+
+        currentWordObj = wordData[index];
+        hintLevel = 0;
+        
+        // Reset UI
+        meaningDisplay.textContent = currentWordObj.meaning;
+        meaningDisplay.style.color = 'var(--text-main)';
+        syllableDisplay.textContent = ""; 
+        wordInput.value = "";
+        wordInput.classList.remove('error', 'success');
+        wordInput.disabled = false;
+        
+        checkBtn.style.display = 'inline-block';
+        nextBtn.style.display = 'none';
+        
+        // Update Progress
+        progressDisplay.textContent = `${index + 1} / ${wordData.length}`;
+        const pct = ((index + 1) / wordData.length) * 100;
+        progressBar.style.width = `${pct}%`;
+
+        // Focus input
+        setTimeout(() => {
+            wordInput.focus();
+            // 語音朗讀功能已移除
+        }, 500);
+    }
+
+    function showHint() {
+        if (!currentWordObj) return;
+        
+        const syllables = currentWordObj.syllables;
+        hintLevel++;
+        
+        // 逐漸顯示音節作為提示
+        let hintText = "";
+        
+        if (hintLevel >= syllables.length) {
+            // 顯示完整的音節格式
+            hintText = syllables.join(" - ").toUpperCase();
+        } else {
+            // 顯示已提示的音節 + 未知音節的下劃線
+            hintText = syllables.map((syl, idx) => {
+                if (idx < hintLevel) return syl.toUpperCase();
+                return "_".repeat(syl.length);
+            }).join(" - ");
+        }
+        
+        syllableDisplay.textContent = hintText;
+        wordInput.focus();
+    }
+
+    function checkAnswer() {
+        const userVal = wordInput.value.trim().toLowerCase();
+        const correctVal = currentWordObj.word.toLowerCase();
+
+        if (userVal === correctVal) {
+            handleSuccess();
+        } else {
+            handleError();
+        }
+    }
+
+    function handleSuccess() {
+        wordInput.classList.add('success');
+        wordInput.disabled = true;
+        meaningDisplay.textContent = "✅ Correct! 答對了！";
+        meaningDisplay.style.color = 'var(--success-color)';
+        syllableDisplay.textContent = currentWordObj.word.toUpperCase();
+        
+        // 加分邏輯 (使用提示會減分)
+        let points = 10;
+        if (hintLevel > 0) points = 5;
+        score += points;
+        updateScore();
+
+        // 慶祝動畫
+        createConfetti();
+        
+        checkBtn.style.display = 'none';
+        nextBtn.style.display = 'inline-block';
+        nextBtn.focus();
+    }
+
+    // 錯誤處理：顯示正確答案並跳到下一題
+    function handleError() {
+        wordInput.classList.add('error');
+        wordInput.disabled = true; // 鎖定輸入框
+        checkBtn.style.display = 'none'; // 隱藏檢查按鈕
+
+        // 顯示正確答案
+        meaningDisplay.textContent = `❌ 錯誤! 正確答案是: ${currentWordObj.word.toUpperCase()}`;
+        meaningDisplay.style.color = 'var(--error-color)';
+        
+        // 顯示音節輔助記憶
+        syllableDisplay.textContent = currentWordObj.syllables.join(" - ").toUpperCase();
+
+        // 顯示下一題按鈕
+        nextBtn.style.display = 'inline-block';
+        nextBtn.focus();
+    }
+
+    function nextWord() {
+        currentIndex++;
+        loadWord(currentIndex);
+    }
+
+    function updateScore() {
+        scoreDisplay.textContent = `分數: ${score}`;
+    }
+
+    function endGame() {
+        document.getElementById('endScreen').style.display = 'flex';
+        document.getElementById('finalScore').textContent = `你的最終分數是: ${score}`;
+    }
+
+    // Enter key support
+    wordInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            if (nextBtn.style.display !== 'none') {
+                nextWord();
+            } else {
+                checkAnswer();
+            }
+        }
+    });
+
+    // Confetti Effect Helper
+    function createConfetti() {
+        const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.classList.add('confetti');
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDuration = (Math.random() * 2 + 1) + 's';
+            document.body.appendChild(confetti);
+            
+            // Cleanup
+            setTimeout(() => {
+                confetti.remove();
+            }, 3000);
+        }
+    }
+
+    // Fisher-Yates Shuffle (洗牌函式 - 未使用但保留)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+</script>
+
+</body>
+</html>
